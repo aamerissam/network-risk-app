@@ -91,13 +91,21 @@ def preprocess_dataframe(
             if hasattr(X_cat, "toarray"):
                 X_cat = X_cat.toarray()
             try:
-                cat_names = list(encoder.get_feature_names_out(cat_cols))
-            except Exception:
+                # Try different methods to get feature names
+                if hasattr(encoder, 'get_feature_names_out'):
+                    cat_names = list(encoder.get_feature_names_out())
+                elif hasattr(encoder, 'get_feature_names'):
+                    cat_names = list(encoder.get_feature_names())
+                else:
+                    cat_names = [f"cat_{i}" for i in range(X_cat.shape[1])]
+            except Exception as e:
+                logger.warning(f"Could not get feature names from encoder: {e}, using defaults")
                 cat_names = [f"cat_{i}" for i in range(X_cat.shape[1])]
         except Exception as e:
             logger.error(f"Error encoding categorical columns: {e}")
             logger.error(f"Categorical columns: {cat_cols}")
             logger.error(f"DataFrame shape: {df.shape}, columns: {list(df.columns)}")
+            logger.error(f"First few rows:\n{df[cat_cols].head()}")
             raise ValueError(f"Failed to encode categorical columns: {str(e)}") from e
     else:
         X_cat = np.array([]).reshape(len(df), 0)
