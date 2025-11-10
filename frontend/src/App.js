@@ -17,6 +17,7 @@ const XGBoostSecurityDashboard = () => {
   const [backendStatus, setBackendStatus] = useState('checking');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [threatDistributionData, setThreatDistributionData] = useState([]);
+  const [uploadedFile, setUploadedFile] = useState(null);
 
   // Vérifier l'état du backend au démarrage
   useEffect(() => {
@@ -75,8 +76,26 @@ const XGBoostSecurityDashboard = () => {
     try {
       console.log('🚀 Lancement de l\'analyse équilibrée avec le backend FastAPI...');
       
-      // 🔥 UTILISE LE NOUVEL ENDPOINT ÉQUILIBRÉ
-      const response = await fetch(`${API_ENDPOINTS.analyzeDatasetBalanced}?benign_samples=500&malicious_samples=500`);
+      let response;
+      
+      // Use uploaded file if available, otherwise use static file
+      if (uploadedFile) {
+        console.log(`📤 Upload du fichier: ${uploadedFile.name}`);
+        
+        const formData = new FormData();
+        formData.append('file', uploadedFile);
+        
+        response = await fetch(
+          `${API_ENDPOINTS.analyzeDatasetUpload}?benign_samples=500&malicious_samples=500`,
+          {
+            method: 'POST',
+            body: formData
+          }
+        );
+      } else {
+        // 🔥 UTILISE LE NOUVEL ENDPOINT ÉQUILIBRÉ (static file)
+        response = await fetch(`${API_ENDPOINTS.analyzeDatasetBalanced}?benign_samples=500&malicious_samples=500`);
+      }
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -303,7 +322,92 @@ const XGBoostSecurityDashboard = () => {
           />
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+          <div style={{
+            ...glassStyle,
+            padding: '20px',
+            minWidth: '400px',
+            maxWidth: '600px',
+            width: '100%'
+          }}>
+            <label style={{
+              display: 'block',
+              color: 'rgba(255, 255, 255, 0.9)',
+              fontWeight: '600',
+              marginBottom: '12px',
+              fontSize: '14px'
+            }}>
+              📁 Upload Dataset (CSV) - Optionnel
+            </label>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    setUploadedFile(file);
+                    console.log(`✅ Fichier sélectionné: ${file.name}`);
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  color: '#ffffff',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+                disabled={isAnalyzing}
+              />
+              {uploadedFile && (
+                <button
+                  onClick={() => {
+                    setUploadedFile(null);
+                    // Reset file input
+                    const fileInput = document.querySelector('input[type="file"]');
+                    if (fileInput) fileInput.value = '';
+                  }}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: 'rgba(239, 68, 68, 0.8)',
+                    color: '#ffffff',
+                    fontWeight: '600',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  ✕ Clear
+                </button>
+              )}
+            </div>
+            {uploadedFile && (
+              <p style={{
+                marginTop: '8px',
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: '12px',
+                fontStyle: 'italic'
+              }}>
+                📄 {uploadedFile.name} ({Math.round(uploadedFile.size / 1024)} KB)
+              </p>
+            )}
+            {!uploadedFile && (
+              <p style={{
+                marginTop: '8px',
+                color: 'rgba(255, 255, 255, 0.5)',
+                fontSize: '12px',
+                fontStyle: 'italic'
+              }}>
+                Si aucun fichier n'est sélectionné, le fichier test_api.csv sera utilisé
+              </p>
+            )}
+          </div>
+          
           <button
             onClick={runBatchAnalysis}
             disabled={isAnalyzing || backendStatus !== 'connected'}

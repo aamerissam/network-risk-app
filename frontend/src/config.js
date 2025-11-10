@@ -13,6 +13,7 @@ export const API_ENDPOINTS = {
   predictCsv: `${API_BASE_URL}/predict/csv`,
   analyzeDataset: `${API_BASE_URL}/analyze-dataset`,
   analyzeDatasetBalanced: `${API_BASE_URL}/analyze-dataset/balanced`,
+  analyzeDatasetUpload: `${API_BASE_URL}/analyze-dataset/upload`,
   analyzeDatasetAllAttacks: `${API_BASE_URL}/analyze-dataset/all-attacks`,
   realtimeMetrics: `${API_BASE_URL}/realtime-metrics`,
 };
