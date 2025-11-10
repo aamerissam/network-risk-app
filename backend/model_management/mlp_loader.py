@@ -42,7 +42,23 @@ class MLPModelLoader:
             if not os.path.exists(MLP_MODEL_PATH):
                 raise FileNotFoundError(f"MLP model file not found: {MLP_MODEL_PATH}")
             
-            self.model = keras.models.load_model(MLP_MODEL_PATH)
+            # Define custom loss function (focal loss) used during training
+            import tensorflow as tf
+            
+            def focal_loss_fixed(y_true, y_pred, gamma=2.0, alpha=0.25):
+                """
+                Focal Loss for multi-class classification
+                """
+                y_pred = tf.clip_by_value(y_pred, tf.keras.backend.epsilon(), 1 - tf.keras.backend.epsilon())
+                y_true = tf.cast(y_true, tf.float32)
+                ce = -y_true * tf.math.log(y_pred)
+                weight = alpha * y_true * tf.pow(1 - y_pred, gamma)
+                fl = weight * ce
+                return tf.reduce_sum(fl, axis=-1)
+            
+            # Load model with custom objects
+            custom_objects = {'focal_loss_fixed': focal_loss_fixed}
+            self.model = tf.keras.models.load_model(MLP_MODEL_PATH, custom_objects=custom_objects)
             logger.info(f"MLP model loaded from: {MLP_MODEL_PATH}")
         except Exception as e:
             logger.error(f"Error loading MLP model: {e}")
