@@ -6,6 +6,7 @@ Constants used across the application
 THREAT_TYPES = {
     'BENIGN': 'Normal',
     'Bot': 'Botnet',
+    'Comb': 'Combined Attack',
     'DDoS': 'DDoS Attack',
     'DoS GoldenEye': 'DoS Attack',
     'DoS Hulk': 'DoS Attack', 
