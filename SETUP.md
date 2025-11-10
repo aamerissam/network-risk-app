@@ -14,7 +14,7 @@ This guide will help you set up the project on your local machine.
 
 ### If you don't have the repository yet:
 ```bash
-git clone https://github.com/aamerissam/network-risk-app.git
+-
 cd network-risk-app
 ```
 

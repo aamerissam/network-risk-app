@@ -29,10 +29,10 @@ const DualModelPredictionsTab = ({ benchmarkResults }) => {
           📊 Prédictions Détaillées - XGBoost vs MLP
         </h3>
         <p style={{ color: 'rgba(255, 255, 255, 0.7)', margin: '0 0 24px 0' }}>
-          Comparaison côte à côte des prédictions des deux modèles (affichage de {Math.min(50, totalSamples)} échantillons)
+          Comparaison côte à côte des prédictions des deux modèles ({totalSamples} échantillons au total)
         </p>
 
-        <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '600px' }}>
+        <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: '800px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead style={{ position: 'sticky', top: 0, background: 'rgba(15, 23, 42, 0.95)', zIndex: 10 }}>
               <tr style={{ borderBottom: '2px solid rgba(255, 255, 255, 0.1)' }}>
@@ -54,7 +54,7 @@ const DualModelPredictionsTab = ({ benchmarkResults }) => {
               </tr>
             </thead>
             <tbody>
-              {xgboost.results.slice(0, 50).map((xgbResult, index) => {
+              {xgboost.results.map((xgbResult, index) => {
                 const mlpResult = mlp.results[index];
                 const agree = xgbResult.prediction_label === mlpResult.prediction_label;
                 
