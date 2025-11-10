@@ -78,20 +78,23 @@ const FileUpload = React.memo(({ uploadedFile, onFileSelect, onFileClear, isDisa
       ...glassStyle,
       padding: '24px',
       width: '100%',
+      boxSizing: 'border-box',
       transition: 'all 0.3s ease'
     }}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
-        marginBottom: '16px'
+        marginBottom: '16px',
+        width: '100%'
       }}>
         <Upload style={{ width: '24px', height: '24px', color: '#8b5cf6' }} />
         <label style={{
           color: 'rgba(255, 255, 255, 0.95)',
           fontWeight: '600',
           fontSize: '16px',
-          cursor: 'pointer'
+          cursor: 'pointer',
+          flex: 1
         }}>
           Upload Dataset CSV (Optionnel)
         </label>
@@ -110,7 +113,8 @@ const FileUpload = React.memo(({ uploadedFile, onFileSelect, onFileClear, isDisa
             cursor: isDisabled ? 'not-allowed' : 'pointer',
             position: 'relative',
             display: 'block',
-            width: '100%'
+            width: '100%',
+            boxSizing: 'border-box'
           }}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
@@ -170,7 +174,8 @@ const FileUpload = React.memo(({ uploadedFile, onFileSelect, onFileClear, isDisa
             gap: '16px',
             position: 'relative',
             cursor: isDisabled ? 'not-allowed' : 'pointer',
-            width: '100%'
+            width: '100%',
+            boxSizing: 'border-box'
           }}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
