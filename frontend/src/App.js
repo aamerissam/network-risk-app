@@ -117,7 +117,7 @@ const XGBoostSecurityDashboard = () => {
       const formData = new FormData();
       formData.append('file', uploadedFile);
       
-      const url = `${API_ENDPOINTS.benchmarkCompare}?sample_size=500`;
+      const url = `${API_ENDPOINTS.benchmarkCompare}?sample_size=1000`;
       
       const response = await fetch(url, {
         method: 'POST',

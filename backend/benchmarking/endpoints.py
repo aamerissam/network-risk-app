@@ -14,7 +14,7 @@ router = APIRouter(prefix="/benchmark", tags=["benchmarking"])
 @router.post("/compare")
 async def compare_models_endpoint(
     file: UploadFile = File(...),
-    sample_size: int = Query(100, ge=1, le=1000, description="Number of samples to analyze")
+    sample_size: int = Query(1000, ge=1, le=10000, description="Number of samples to analyze (max 10000)")
 ):
     """
     Compare XGBoost and MLP models on uploaded CSV data
