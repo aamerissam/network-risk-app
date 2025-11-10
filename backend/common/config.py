@@ -7,7 +7,7 @@ import os
 APP_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Models directory
-MODELS_DIR = os.path.join(APP_ROOT, "models")
+MODELS_DIR = os.path.join(APP_ROOT, "models", "xgboost")
 
 # Model file paths
 MODEL_PATH = os.path.join(MODELS_DIR, "xgb_model_train_optimized2.json")
