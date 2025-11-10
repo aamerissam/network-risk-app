@@ -9,6 +9,7 @@ import PredictionsTab from './components/PredictionsTab';
 import MetricsTab from './components/MetricsTab';
 import ComplianceTab from './components/ComplianceTab';
 import DatasetTab from './components/DatasetTab';
+import BenchmarkTab from './components/BenchmarkTab';
 
 
 const XGBoostSecurityDashboard = () => {
@@ -25,6 +26,8 @@ const XGBoostSecurityDashboard = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [threatDistributionData, setThreatDistributionData] = useState([]);
   const [uploadedFile, setUploadedFile] = useState(null);
+  const [benchmarkResults, setBenchmarkResults] = useState(null);
+  const [isBenchmarking, setIsBenchmarking] = useState(false);
 
   // Vérifier l'état du backend au démarrage
   useEffect(() => {
@@ -98,6 +101,51 @@ const XGBoostSecurityDashboard = () => {
     console.log('=== Clearing file ===');
     setUploadedFile(null);
   }, []);
+
+  // Benchmark both models
+  const runBenchmark = async () => {
+    if (!uploadedFile) {
+      alert('Veuillez sélectionner un fichier CSV à analyser');
+      return;
+    }
+
+    setIsBenchmarking(true);
+    
+    try {
+      console.log('🚀 Lancement du benchmark XGBoost vs MLP...');
+      
+      const formData = new FormData();
+      formData.append('file', uploadedFile);
+      
+      const url = `${API_ENDPOINTS.benchmarkCompare}?sample_size=100`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Erreur HTTP ${response.status}: ${errorData.detail || 'Erreur inconnue'}`);
+      }
+      
+      const data = await response.json();
+      
+      console.log('✅ Benchmark terminé:', data);
+      console.log(`   Agreement rate: ${data.comparison.agreement_rate}%`);
+      console.log(`   XGBoost time: ${data.xgboost.processing_time}s`);
+      console.log(`   MLP time: ${data.mlp.processing_time}s`);
+      
+      setBenchmarkResults(data);
+      setActiveTab('benchmark'); // Switch to benchmark tab
+      
+    } catch (error) {
+      console.error('❌ Erreur lors du benchmark:', error);
+      alert(`Erreur lors du benchmark:\n${error.message}`);
+    } finally {
+      setIsBenchmarking(false);
+    }
+  };
 
   // Analyse avec les VRAIES données du backend - VERSION AMÉLIORÉE
   const runBatchAnalysis = async () => {
@@ -316,6 +364,7 @@ const XGBoostSecurityDashboard = () => {
             <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {[
                 { icon: Shield, label: 'Dashboard Principal', id: 'dashboard' },
+                { icon: Activity, label: 'Benchmark XGBoost vs MLP', id: 'benchmark' },
                 { icon: Database, label: 'Analyse & Prédictions', id: 'predictions' },
                 { icon: FileText, label: 'Détails du Dataset', id: 'dataset' },
                 { icon: TrendingUp, label: 'Métriques Modèle', id: 'metrics' },
@@ -391,6 +440,71 @@ const XGBoostSecurityDashboard = () => {
           <main style={{ flex: 1, padding: '24px' }}>
             {(() => {
               switch (activeTab) {
+                case 'benchmark':
+                  return (
+                    <div>
+                      <div style={{
+                        background: 'rgba(15, 23, 42, 0.6)',
+                        backdropFilter: 'blur(12px)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '16px',
+                        padding: '24px',
+                        marginBottom: '24px'
+                      }}>
+                        <h2 style={{ 
+                          fontSize: '24px', 
+                          fontWeight: '600', 
+                          color: '#ffffff', 
+                          margin: '0 0 16px 0' 
+                        }}>
+                          🔬 XGBoost vs MLP Benchmark
+                        </h2>
+                        <p style={{ color: 'rgba(255, 255, 255, 0.7)', margin: '0 0 20px 0' }}>
+                          Compare the performance of both models side-by-side
+                        </p>
+                        <FileUpload 
+                          uploadedFile={uploadedFile}
+                          onFileSelect={handleFileSelection}
+                          onClearFile={clearSelectedFile}
+                          isDisabled={isBenchmarking}
+                        />
+                        <button
+                          onClick={runBenchmark}
+                          disabled={isBenchmarking || !uploadedFile}
+                          style={{
+                            padding: '14px 32px',
+                            background: isBenchmarking || !uploadedFile
+                              ? 'rgba(100, 116, 139, 0.5)'
+                              : 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '12px',
+                            cursor: isBenchmarking || !uploadedFile ? 'not-allowed' : 'pointer',
+                            fontSize: '16px',
+                            fontWeight: '500',
+                            marginTop: '16px',
+                            transition: 'all 0.3s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                        >
+                          {isBenchmarking ? (
+                            <>
+                              <RefreshCw style={{ width: '20px', height: '20px', animation: 'spin 1s linear infinite' }} />
+                              Benchmarking...
+                            </>
+                          ) : (
+                            <>
+                              <Activity style={{ width: '20px', height: '20px' }} />
+                              Run Benchmark
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <BenchmarkTab benchmarkResults={benchmarkResults} />
+                    </div>
+                  );
                 case 'predictions':
                   return <PredictionsTab analysisResults={analysisResults} />;
                 case 'dataset':

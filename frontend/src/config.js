@@ -16,5 +16,8 @@ export const API_ENDPOINTS = {
   analyzeDatasetUpload: `${API_BASE_URL}/analyze-dataset/upload`,
   analyzeDatasetAllAttacks: `${API_BASE_URL}/analyze-dataset/all-attacks`,
   realtimeMetrics: `${API_BASE_URL}/realtime-metrics`,
+  benchmarkCompare: `${API_BASE_URL}/benchmark/compare`,
+  benchmarkModelsInfo: `${API_BASE_URL}/benchmark/models-info`,
+  benchmarkHealth: `${API_BASE_URL}/benchmark/health`
 };
 
