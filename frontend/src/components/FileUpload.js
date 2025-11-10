@@ -77,8 +77,6 @@ const FileUpload = React.memo(({ uploadedFile, onFileSelect, onFileClear, isDisa
     <div style={{
       ...glassStyle,
       padding: '24px',
-      minWidth: '500px',
-      maxWidth: '700px',
       width: '100%',
       transition: 'all 0.3s ease'
     }}>
