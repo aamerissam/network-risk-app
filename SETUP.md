@@ -65,6 +65,16 @@ git checkout xbst_vs_mlp_benchmarking
 git pull origin xbst_vs_mlp_benchmarking
 ```
 
+### Hard pull (force update - discards local changes):
+**⚠️ Warning:** This will discard any local changes and force your branch to match the remote exactly.
+
+```bash
+cd network-risk-app
+git fetch origin
+git checkout xbst_vs_mlp_benchmarking
+git reset --hard origin/xbst_vs_mlp_benchmarking
+```
+
 ---
 
 ## 🐍 Step 2: Backend Setup
