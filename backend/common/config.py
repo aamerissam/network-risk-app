@@ -6,14 +6,22 @@ import os
 # Application root directory
 APP_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Models directory
-MODELS_DIR = os.path.join(APP_ROOT, "models")
+# Models directories
+MODELS_BASE_DIR = os.path.join(APP_ROOT, "models")
+XGBOOST_DIR = os.path.join(MODELS_BASE_DIR, "xgboost")
+MLP_DIR = os.path.join(MODELS_BASE_DIR, "mlp")
 
-# Model file paths
-MODEL_PATH = os.path.join(MODELS_DIR, "xgb_model_train_optimized2.json")
-ENCODER_PATH = os.path.join(MODELS_DIR, "encoder_xgb2.pkl")
-SCALER_PATH = os.path.join(MODELS_DIR, "scaler_xgb2.pkl")
-FEATURE_COLUMNS_PATH = os.path.join(MODELS_DIR, "feature_columns.json")
+# XGBoost Model file paths (default/primary model)
+MODELS_DIR = XGBOOST_DIR  # For backwards compatibility
+MODEL_PATH = os.path.join(XGBOOST_DIR, "xgb_model_train_optimized2.json")
+ENCODER_PATH = os.path.join(XGBOOST_DIR, "encoder_xgb2.pkl")
+SCALER_PATH = os.path.join(XGBOOST_DIR, "scaler_xgb2.pkl")
+FEATURE_COLUMNS_PATH = os.path.join(XGBOOST_DIR, "feature_columns.json")
+
+# MLP Model file paths
+MLP_MODEL_PATH = os.path.join(MLP_DIR, "mlp_cicids2017_v2_optimized.keras")
+MLP_ENCODER_PATH = os.path.join(MLP_DIR, "label_encoder_mlp_optimized.pkl")
+MLP_SCALER_PATH = os.path.join(MLP_DIR, "scaler_mlp_optimized.pkl")
 
 # CORS origins
 CORS_ORIGINS = [

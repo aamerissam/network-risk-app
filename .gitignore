@@ -48,3 +48,7 @@ backend/models/*
 backend/test_api.csv
 "node_modules/" 
 "**/node_modules/" 
+
+# Large output files
+backend/*.csv
+backend/*.png

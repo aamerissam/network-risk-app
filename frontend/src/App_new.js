@@ -4,22 +4,27 @@ import { Shield, Activity, AlertTriangle, CheckCircle, FileText, Eye, TrendingUp
 
 import { API_ENDPOINTS } from './config';
 import FileUpload from './components/FileUpload';
-import BenchmarkDashboard from './components/BenchmarkDashboard';
-import DualModelPredictionsTab from './components/DualModelPredictionsTab';
-import BenchmarkTab from './components/BenchmarkTab';
+import Dashboard from './components/Dashboard';
+import PredictionsTab from './components/PredictionsTab';
+import MetricsTab from './components/MetricsTab';
+import ComplianceTab from './components/ComplianceTab';
+import DatasetTab from './components/DatasetTab';
 
 
 const XGBoostSecurityDashboard = () => {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResults, setAnalysisResults] = useState(null);
+  const [modelMetrics, setModelMetrics] = useState({
+    accuracy: 0,
+    precision: 0,
+    recall: 0,
+    f1Score: 0
+  });
   const [backendStatus, setBackendStatus] = useState('checking');
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [threatDistributionData, setThreatDistributionData] = useState([]);
   const [uploadedFile, setUploadedFile] = useState(null);
-  const [benchmarkResults, setBenchmarkResults] = useState(null);
-  const [isBenchmarking, setIsBenchmarking] = useState(false);
-  const [modelMetrics, setModelMetrics] = useState({
-    xgboost: { accuracy: 99.86, precision: 100, recall: 100, f1Score: 99.87 },
-    mlp: { accuracy: 97, precision: 98, recall: 97, f1Score: 98 }
-  });
 
   // Vérifier l'état du backend au démarrage
   useEffect(() => {
@@ -55,27 +60,18 @@ const XGBoostSecurityDashboard = () => {
 
   const loadModelInfo = async () => {
     try {
-      const response = await fetch(API_ENDPOINTS.benchmarkModelsInfo);
+      const response = await fetch(API_ENDPOINTS.modelInfo);
       const data = await response.json();
       
-      // Métriques statiques - ne pas mettre à jour depuis l'API
-      // Les métriques restent celles définies dans useState (lignes 20-21)
-      // setModelMetrics({
-      //   xgboost: {
-      //     accuracy: data.xgboost.performance_metrics.accuracy,
-      //     precision: data.xgboost.performance_metrics.precision,
-      //     recall: data.xgboost.performance_metrics.recall,
-      //     f1Score: data.xgboost.performance_metrics.f1_score
-      //   },
-      //   mlp: {
-      //     accuracy: data.mlp.performance_metrics.accuracy,
-      //     precision: data.mlp.performance_metrics.precision,
-      //     recall: data.mlp.performance_metrics.recall,
-      //     f1Score: data.mlp.performance_metrics.f1_score
-      //   }
-      // });
+      // Charger les VRAIES métriques du backend
+      setModelMetrics({
+        accuracy: data.performance_metrics.accuracy,
+        precision: data.performance_metrics.precision,
+        recall: data.performance_metrics.recall,
+        f1Score: data.performance_metrics.f1_score
+      });
       
-      console.log('✅ Informations des modèles chargées (métriques statiques conservées)');
+      console.log('✅ Métriques du modèle chargées:', data.performance_metrics);
     } catch (error) {
       console.error('❌ Erreur chargement métriques:', error);
     }
@@ -103,51 +99,115 @@ const XGBoostSecurityDashboard = () => {
     setUploadedFile(null);
   }, []);
 
-  // Benchmark both models
-  const runBenchmark = async () => {
-    if (!uploadedFile) {
-      alert('Veuillez sélectionner un fichier CSV à analyser');
-      return;
-    }
-
-    setIsBenchmarking(true);
+  // Analyse avec les VRAIES données du backend - VERSION AMÉLIORÉE
+  const runBatchAnalysis = async () => {
+    setIsAnalyzing(true);
     
     try {
-      console.log('🚀 Lancement du benchmark XGBoost vs MLP...');
+      console.log('🚀 Lancement de l\'analyse équilibrée avec le backend FastAPI...');
       
-      const formData = new FormData();
-      formData.append('file', uploadedFile);
+      let response;
       
-      const url = `${API_ENDPOINTS.benchmarkCompare}?sample_size=1000`;
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        body: formData
-      });
+      // Use uploaded file if available, otherwise use static file
+      if (uploadedFile) {
+        console.log(`📤 Upload du fichier: ${uploadedFile.name}`);
+        
+        const formData = new FormData();
+        formData.append('file', uploadedFile);
+        
+        response = await fetch(
+          `${API_ENDPOINTS.analyzeDatasetUpload}?benign_samples=500&malicious_samples=500`,
+          {
+            method: 'POST',
+            body: formData
+          }
+        );
+      } else {
+        // 🔥 UTILISE LE NOUVEL ENDPOINT ÉQUILIBRÉ (static file)
+        response = await fetch(`${API_ENDPOINTS.analyzeDatasetBalanced}?benign_samples=500&malicious_samples=500`);
+      }
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Erreur HTTP ${response.status}: ${errorData.detail || 'Erreur inconnue'}`);
+        const errorText = await response.text();
+        console.error('❌ Erreur du serveur:', errorText);
+        throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
       }
       
       const data = await response.json();
+      console.log('✅ Données reçues du backend:', data);
       
-      console.log('✅ Benchmark terminé:', data);
-      console.log(`   Agreement rate: ${data.comparison.agreement_rate}%`);
-      console.log(`   XGBoost time: ${data.xgboost.processing_time}s`);
-      console.log(`   MLP time: ${data.mlp.processing_time}s`);
+      // Vérifier que les données sont valides
+      if (!data.results || !Array.isArray(data.results)) {
+        throw new Error('Format de données invalide reçu du backend');
+      }
       
-      setBenchmarkResults(data);
-      setActiveTab('overview'); // Switch to overview tab to show results
+      // Transformer les données pour l'affichage
+      const transformedResults = data.results.map((pred, index) => ({
+        id: pred.id !== undefined ? pred.id : index,
+        timestamp: pred.timestamp || new Date().toLocaleString(),
+        prediction: pred.prediction,
+        confidence: typeof pred.confidence === 'number' ? pred.confidence.toFixed(3) : '0.000',
+        threatType: pred.threat_type || 'Normal',
+        originalLabel: pred.original_label || 'N/A',
+        FlowDuration: Math.floor(Math.random() * 120000000)
+      }));
+      
+      setAnalysisResults(transformedResults);
+      
+      // Calculer la distribution des menaces
+      const distribution = [
+        { 
+          name: 'BENIGN', 
+          value: data.summary.total_benign || 0, 
+          color: '#10b981' 
+        },
+        { 
+          name: 'MALICIOUS', 
+          value: data.summary.total_malicious || 0, 
+          color: '#ef4444' 
+        }
+      ];
+      setThreatDistributionData(distribution);
+      
+      console.log(`✅ Analyse terminée: ${data.summary.total_samples} échantillons`);
+      console.log(`   - BENIGN: ${data.summary.total_benign}`);
+      console.log(`   - MALICIOUS: ${data.summary.total_malicious}`);
+      
+      // Afficher les infos d'échantillonnage
+      if (data.dataset_info) {
+        console.log(`📊 Échantillonnage:`);
+        console.log(`   - Méthode: ${data.dataset_info.sampling_method}`);
+        console.log(`   - Total dataset: ${data.dataset_info.total_rows} lignes`);
+        console.log(`   - Échantillon: ${data.dataset_info.sampled_rows} lignes`);
+        if (data.dataset_info.benign_actual !== undefined) {
+          console.log(`   - BENIGN: ${data.dataset_info.benign_actual}`);
+          console.log(`   - MALICIOUS: ${data.dataset_info.malicious_actual}`);
+        }
+      }
       
     } catch (error) {
-      console.error('❌ Erreur lors du benchmark:', error);
-      alert(`Erreur lors du benchmark:\n${error.message}`);
+      console.error('❌ Erreur lors de l\'analyse:', error);
+      
+      // Message d'erreur plus détaillé
+      let errorMessage = `Erreur de connexion au backend:\n${error.message}\n\n`;
+      
+      if (error.message.includes('500')) {
+        errorMessage += 'Le serveur a rencontré une erreur interne.\n';
+        errorMessage += 'Vérifiez les logs du backend (terminal) pour plus de détails.\n\n';
+        errorMessage += 'Causes possibles:\n';
+        errorMessage += '- Le fichier test_api.csv est introuvable\n';
+        errorMessage += '- Le fichier test_api.csv n\'a pas de colonne "Label"\n';
+        errorMessage += '- Erreur de prétraitement des données';
+      } else if (error.message.includes('Failed to fetch')) {
+        errorMessage += 'Le backend ne répond pas.\n';
+        errorMessage += `Vérifiez que le backend tourne sur ${API_ENDPOINTS.health.replace('/model/health', '')}`;
+      }
+      
+      alert(errorMessage);
     } finally {
-      setIsBenchmarking(false);
+      setIsAnalyzing(false);
     }
   };
-
 
   // Styles
   const glassStyle = {
@@ -216,12 +276,12 @@ const XGBoostSecurityDashboard = () => {
                   fontWeight: 'bold', 
                   color: '#ffffff', 
                   margin: '0 0 4px 0',
-                }}>🔬 XGBoost vs MLP Benchmark Platform</h1>
+                }}>XGBoost Security Analyzer</h1>
                 <p style={{ 
                   color: 'rgba(255, 255, 255, 0.8)', 
                   margin: 0,
                   fontSize: '14px'
-                }}>Comparaison de Performance des Modèles de Détection d'Intrusion - CIC-IDS-2017</p>
+                }}>Détection d'Intrusion Basée sur l'IA - Connecté au Backend FastAPI</p>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -255,9 +315,11 @@ const XGBoostSecurityDashboard = () => {
           }}>
             <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {[
-                { icon: Activity, label: 'Vue d\'Ensemble', id: 'overview' },
-                { icon: Database, label: 'Prédictions Détaillées', id: 'predictions' },
-                { icon: TrendingUp, label: 'Désaccords & Analyse', id: 'disagreements' }
+                { icon: Shield, label: 'Dashboard Principal', id: 'dashboard' },
+                { icon: Database, label: 'Analyse & Prédictions', id: 'predictions' },
+                { icon: FileText, label: 'Détails du Dataset', id: 'dataset' },
+                { icon: TrendingUp, label: 'Métriques Modèle', id: 'metrics' },
+                { icon: CheckCircle, label: 'Conformité Réglementaire', id: 'compliance' }
               ].map(({ icon: Icon, label, id }) => (
                 <button
                   key={id}
@@ -288,35 +350,41 @@ const XGBoostSecurityDashboard = () => {
               ))}
             </nav>
             
-            {/* Models Info */}
-            <div style={{ marginTop: '32px' }}>
+            <div style={{
+              marginTop: '32px',
+              padding: '20px',
+              ...glassStyle,
+              background: 'rgba(139, 92, 246, 0.1)',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+            }}>
               <h4 style={{ 
                 color: '#ffffff', 
-                fontWeight: '600', 
+                fontWeight: '500', 
                 margin: '0 0 16px 0',
-                fontSize: '16px',
                 display: 'flex', 
                 alignItems: 'center'
               }}>
-                <Shield style={{ width: '20px', height: '20px', marginRight: '8px', color: '#3b82f6' }} />
-                Modèles Chargés
+                <Lock style={{ width: '16px', height: '16px', marginRight: '8px', color: '#8b5cf6' }} />
+                Modèle XGBoost
               </h4>
-            </div>
-
-            {/* Models Accuracy */}
-            <div style={{
-              marginTop: '24px',
-              padding: '16px',
-              ...glassStyle,
-              background: 'rgba(59, 130, 246, 0.05)',
-              border: '1px solid rgba(59, 130, 246, 0.2)',
-            }}>
-              <h5 style={{ color: '#3b82f6', fontSize: '13px', fontWeight: '600', margin: '0 0 8px 0' }}>
-                🚀 XGBoost: {modelMetrics.xgboost.accuracy}%
-              </h5>
-              <h5 style={{ color: '#8b5cf6', fontSize: '13px', fontWeight: '600', margin: '0' }}>
-                🧠 MLP: {modelMetrics.mlp.accuracy}%
-              </h5>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255, 255, 255, 0.8)' }}>
+                  <span>Version:</span>
+                  <span style={{ color: '#10b981', fontWeight: '500' }}>v2.1</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255, 255, 255, 0.8)' }}>
+                  <span>Features:</span>
+                  <span style={{ color: '#3b82f6', fontWeight: '500' }}>78</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255, 255, 255, 0.8)' }}>
+                  <span>Backend:</span>
+                  <span style={{ color: '#f59e0b', fontWeight: '500' }}>FastAPI</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'rgba(255, 255, 255, 0.8)' }}>
+                  <span>Port:</span>
+                  <span style={{ color: '#8b5cf6', fontWeight: '500' }}>8000</span>
+                </div>
+              </div>
             </div>
           </aside>
 
@@ -324,19 +392,25 @@ const XGBoostSecurityDashboard = () => {
             {(() => {
               switch (activeTab) {
                 case 'predictions':
-                  return <DualModelPredictionsTab benchmarkResults={benchmarkResults} />;
-                case 'disagreements':
-                  return <BenchmarkTab benchmarkResults={benchmarkResults} />;
-                case 'overview':
+                  return <PredictionsTab analysisResults={analysisResults} />;
+                case 'dataset':
+                  return <DatasetTab />;
+                case 'metrics':
+                  return <MetricsTab modelMetrics={modelMetrics} />;
+                case 'compliance':
+                  return <ComplianceTab modelMetrics={modelMetrics} />;
                 default:
-                  return <BenchmarkDashboard 
-                    benchmarkResults={benchmarkResults} 
+                  return <Dashboard 
+                    analysisResults={analysisResults}
                     modelMetrics={modelMetrics}
+                    backendStatus={backendStatus}
+                    threatDistributionData={threatDistributionData}
                     uploadedFile={uploadedFile}
-                    onFileSelect={handleFileSelection}
-                    onClearFile={clearSelectedFile}
-                    isBenchmarking={isBenchmarking}
-                    onRunBenchmark={runBenchmark}
+                    isAnalyzing={isAnalyzing}
+                    checkBackendHealth={checkBackendHealth}
+                    handleFileSelection={handleFileSelection}
+                    clearSelectedFile={clearSelectedFile}
+                    runBatchAnalysis={runBatchAnalysis}
                   />;
               }
             })()}
@@ -359,7 +433,7 @@ const XGBoostSecurityDashboard = () => {
             color: 'rgba(255, 255, 255, 0.8)' 
           }}>
             <p style={{ margin: 0 }}>
-              XGBoost vs MLP Benchmark Platform v2.0 • FastAPI Backend • CIC-IDS-2017 Dataset
+              XGBoost Security Analyzer v1.0 • Backend FastAPI • Accuracy: {modelMetrics.accuracy.toFixed(2)}%
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <span style={{ display: 'flex', alignItems: 'center' }}>

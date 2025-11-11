@@ -46,13 +46,16 @@ class PredictionService:
             pred = model.classes_[np.argmax(probs)]
             confidence = float(np.max(probs))
             
+            # Decode numeric prediction to label
+            pred_label = self.model_loader.encoder.inverse_transform([pred])[0]
+            
             # Determine threat type
-            threat_type = THREAT_TYPES.get(str(pred), "Unknown")
+            threat_type = THREAT_TYPES.get(pred_label, "Unknown")
             
             return {
                 "prediction": str(pred),
                 "confidence": confidence,
-                "threat_type": threat_type if str(pred) != 'BENIGN' else None,
+                "threat_type": threat_type if pred_label != 'BENIGN' else None,
                 "probabilities": {
                     str(cls): float(prob) 
                     for cls, prob in zip(model.classes_, probs)
@@ -87,17 +90,20 @@ class PredictionService:
             y_pred = model.predict(X)
             y_proba = model.predict_proba(X)
             
+            # Decode numeric predictions to labels
+            y_pred_labels = self.model_loader.encoder.inverse_transform(y_pred)
+            
             # Build detailed results
             results = []
-            for i, (pred, proba_row) in enumerate(zip(y_pred, y_proba)):
+            for i, (pred, pred_label, proba_row) in enumerate(zip(y_pred, y_pred_labels, y_proba)):
                 confidence = float(np.max(proba_row))
-                threat_type = THREAT_TYPES.get(str(pred), "Unknown")
+                threat_type = THREAT_TYPES.get(pred_label, "Unknown")
                 
                 result = {
                     "id": i,
                     "prediction": str(pred),
                     "confidence": confidence,
-                    "threat_type": threat_type if str(pred) != 'BENIGN' else None,
+                    "threat_type": threat_type if pred_label != 'BENIGN' else None,
                     "timestamp": datetime.now().isoformat(),
                     "probabilities": {
                         str(cls): float(prob) 
@@ -114,8 +120,8 @@ class PredictionService:
                 
                 results.append(result)
             
-            # Statistics
-            counts = pd.Series(y_pred).value_counts().to_dict()
+            # Statistics (use decoded labels)
+            counts = pd.Series(y_pred_labels).value_counts().to_dict()
             total_malicious = sum(v for k, v in counts.items() if k != 'BENIGN')
             
             return {

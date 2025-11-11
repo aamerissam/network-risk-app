@@ -58,6 +58,120 @@ class DatasetAnalysisService:
             logger.error(f"Error in analyze_dataset: {e}")
             raise
     
+    def analyze_dataset_balanced_from_dataframe(
+        self,
+        df: pd.DataFrame,
+        benign_samples: int = 500,
+        malicious_samples: int = 500,
+        filename: str = "uploaded_file.csv"
+    ) -> Dict[str, Any]:
+        """
+        Analyze dataset from DataFrame with balanced sampling
+        
+        Args:
+            df: DataFrame to analyze
+            benign_samples: Number of BENIGN samples
+            malicious_samples: Number of malicious samples
+            filename: Name of the uploaded file
+        
+        Returns:
+            Dictionary with balanced analysis results
+        """
+        try:
+            logger.info(f"Dataset {filename} loaded: {len(df)} rows, {len(df.columns)} columns")
+            
+            # Validate dataset is not empty
+            if df.empty:
+                raise ValueError(f"Dataset {filename} is empty")
+            
+            # Stratified sampling
+            if 'Label' in df.columns:
+                df_benign = df[df['Label'] == 'BENIGN']
+                df_malicious = df[df['Label'] != 'BENIGN']
+                
+                logger.info(
+                    f"Dataset original: {len(df_benign)} BENIGN, "
+                    f"{len(df_malicious)} MALICIOUS"
+                )
+                
+                # Sample
+                n_benign = min(benign_samples, len(df_benign))
+                n_malicious = min(malicious_samples, len(df_malicious))
+                
+                sample_benign = (
+                    df_benign.sample(n=n_benign, random_state=42) 
+                    if n_benign > 0 
+                    else pd.DataFrame()
+                )
+                sample_malicious = (
+                    df_malicious.sample(n=n_malicious, random_state=42) 
+                    if n_malicious > 0 
+                    else pd.DataFrame()
+                )
+                
+                # Combine and shuffle
+                if len(sample_benign) > 0 and len(sample_malicious) > 0:
+                    df_sample = pd.concat(
+                        [sample_benign, sample_malicious], 
+                        ignore_index=True
+                    )
+                elif len(sample_benign) > 0:
+                    df_sample = sample_benign
+                elif len(sample_malicious) > 0:
+                    df_sample = sample_malicious
+                else:
+                    raise ValueError("No samples available after filtering")
+                
+                # Only shuffle if we have more than one row
+                if len(df_sample) > 1:
+                    df_sample = df_sample.sample(
+                        frac=1, random_state=42
+                    ).reset_index(drop=True)
+                else:
+                    df_sample = df_sample.reset_index(drop=True)
+                
+                logger.info(
+                    f"✅ Balanced sample created: {n_benign} BENIGN, "
+                    f"{n_malicious} MALICIOUS"
+                )
+            else:
+                # Simple sampling if no Label column
+                df_sample = df.sample(
+                    n=min(benign_samples + malicious_samples, len(df)), 
+                    random_state=42
+                )
+                n_benign = 0
+                n_malicious = 0
+                logger.warning(
+                    "Column 'Label' not found, simple sampling performed"
+                )
+            
+            # Make predictions
+            result = self.prediction_service.predict_batch(df_sample)
+            
+            # Add original labels if available
+            if 'Label' in df_sample.columns:
+                for i, (_, row) in enumerate(df_sample.iterrows()):
+                    if i < len(result["results"]):
+                        result["results"][i]['original_label'] = str(row['Label'])
+            
+            # Add dataset info
+            result["dataset_info"] = {
+                "total_rows": len(df),
+                "sampled_rows": len(df_sample),
+                "benign_requested": benign_samples,
+                "malicious_requested": malicious_samples,
+                "benign_actual": n_benign if 'Label' in df.columns else 0,
+                "malicious_actual": n_malicious if 'Label' in df.columns else 0,
+                "sampling_method": "balanced",
+                "file_path": filename
+            }
+            
+            return result
+        except Exception as e:
+            logger.error(f"Error in analyze_dataset_balanced_from_dataframe: {e}")
+            raise
+    
     def analyze_dataset_balanced(
         self, 
         benign_samples: int = 500, 

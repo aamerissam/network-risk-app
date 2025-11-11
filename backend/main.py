@@ -11,6 +11,7 @@ from common.constants import THREAT_TYPES
 from model_management.endpoints import router as model_router
 from prediction.endpoints import router as prediction_router
 from dataset_analysis.endpoints import router as dataset_router
+from benchmarking.endpoints import router as benchmark_router
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -32,14 +33,15 @@ app.add_middleware(
 app.include_router(model_router)
 app.include_router(prediction_router)
 app.include_router(dataset_router)
+app.include_router(benchmark_router)
 
 
 @app.get("/")
 def root():
     """Root endpoint with API information"""
     return {
-        "message": "CIC-IDS 2017 XGBoost API",
-        "version": "1.0",
+        "message": "CIC-IDS 2017 XGBoost vs MLP Benchmarking API",
+        "version": "2.0",
         "endpoints": [
             "/model/health",
             "/model/info",
@@ -48,6 +50,9 @@ def root():
             "/analyze-dataset",
             "/analyze-dataset/balanced",
             "/analyze-dataset/all-attacks",
+            "/benchmark/compare",
+            "/benchmark/models-info",
+            "/benchmark/health",
             "/realtime-metrics"
         ]
     }

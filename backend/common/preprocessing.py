@@ -59,11 +59,35 @@ def preprocess_dataframe(
     if df.empty:
         raise ValueError("DataFrame is empty. Cannot preprocess empty data.")
     
-    # Remove unnecessary columns
-    if "Timestamp" in df.columns:
-        df.drop("Timestamp", axis=1, inplace=True)
-    if "Label" in df.columns:
-        df.drop("Label", axis=1, inplace=True)
+    # Normalize column names to match scaler's expected format
+    # Create a case-insensitive mapping using scaler's feature names
+    if hasattr(scaler, 'feature_names_in_'):
+        expected_cols_lower = {col.lower(): col for col in scaler.feature_names_in_}
+        
+        # Rename columns to match scaler's expectations (case-insensitive)
+        renamed_columns = []
+        for col in df.columns:
+            col_lower = col.lower()
+            if col_lower in expected_cols_lower:
+                renamed_columns.append(expected_cols_lower[col_lower])
+            else:
+                renamed_columns.append(col)  # Keep original if no match
+        
+        df.columns = renamed_columns
+        logger.info(f"Normalized column names to match scaler (first 5): {df.columns[:5].tolist()}")
+    else:
+        logger.warning("Scaler does not have feature_names_in_, using original column names")
+    
+    # Remove unnecessary columns (check both cases)
+    for col in ["Timestamp", "timestamp"]:
+        if col in df.columns or col.replace('_', ' ').title().replace(' ', '_') in df.columns:
+            cols_to_drop = [c for c in df.columns if c.lower() == col.lower()]
+            df.drop(cols_to_drop, axis=1, inplace=True, errors='ignore')
+    
+    for col in ["Label", "label"]:
+        if col in df.columns or col.replace('_', ' ').title().replace(' ', '_') in df.columns:
+            cols_to_drop = [c for c in df.columns if c.lower() == col.lower()]
+            df.drop(cols_to_drop, axis=1, inplace=True, errors='ignore')
     
     # Check if DataFrame still has columns after removing Timestamp/Label
     if df.empty or len(df.columns) == 0:
@@ -91,13 +115,21 @@ def preprocess_dataframe(
             if hasattr(X_cat, "toarray"):
                 X_cat = X_cat.toarray()
             try:
-                cat_names = list(encoder.get_feature_names_out(cat_cols))
-            except Exception:
+                # Try different methods to get feature names
+                if hasattr(encoder, 'get_feature_names_out'):
+                    cat_names = list(encoder.get_feature_names_out())
+                elif hasattr(encoder, 'get_feature_names'):
+                    cat_names = list(encoder.get_feature_names())
+                else:
+                    cat_names = [f"cat_{i}" for i in range(X_cat.shape[1])]
+            except Exception as e:
+                logger.warning(f"Could not get feature names from encoder: {e}, using defaults")
                 cat_names = [f"cat_{i}" for i in range(X_cat.shape[1])]
         except Exception as e:
             logger.error(f"Error encoding categorical columns: {e}")
             logger.error(f"Categorical columns: {cat_cols}")
             logger.error(f"DataFrame shape: {df.shape}, columns: {list(df.columns)}")
+            logger.error(f"First few rows:\n{df[cat_cols].head()}")
             raise ValueError(f"Failed to encode categorical columns: {str(e)}") from e
     else:
         X_cat = np.array([]).reshape(len(df), 0)
