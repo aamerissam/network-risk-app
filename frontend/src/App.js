@@ -58,23 +58,24 @@ const XGBoostSecurityDashboard = () => {
       const response = await fetch(API_ENDPOINTS.benchmarkModelsInfo);
       const data = await response.json();
       
-      // Charger les métriques des DEUX modèles
-      setModelMetrics({
-        xgboost: {
-          accuracy: data.xgboost.performance_metrics.accuracy,
-          precision: data.xgboost.performance_metrics.precision,
-          recall: data.xgboost.performance_metrics.recall,
-          f1Score: data.xgboost.performance_metrics.f1_score
-        },
-        mlp: {
-          accuracy: data.mlp.performance_metrics.accuracy,
-          precision: data.mlp.performance_metrics.precision,
-          recall: data.mlp.performance_metrics.recall,
-          f1Score: data.mlp.performance_metrics.f1_score
-        }
-      });
+      // Métriques statiques - ne pas mettre à jour depuis l'API
+      // Les métriques restent celles définies dans useState (lignes 20-21)
+      // setModelMetrics({
+      //   xgboost: {
+      //     accuracy: data.xgboost.performance_metrics.accuracy,
+      //     precision: data.xgboost.performance_metrics.precision,
+      //     recall: data.xgboost.performance_metrics.recall,
+      //     f1Score: data.xgboost.performance_metrics.f1_score
+      //   },
+      //   mlp: {
+      //     accuracy: data.mlp.performance_metrics.accuracy,
+      //     precision: data.mlp.performance_metrics.precision,
+      //     recall: data.mlp.performance_metrics.recall,
+      //     f1Score: data.mlp.performance_metrics.f1_score
+      //   }
+      // });
       
-      console.log('✅ Métriques des deux modèles chargées');
+      console.log('✅ Informations des modèles chargées (métriques statiques conservées)');
     } catch (error) {
       console.error('❌ Erreur chargement métriques:', error);
     }
