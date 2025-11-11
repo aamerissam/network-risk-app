@@ -10,11 +10,50 @@ This guide will help you set up the project on your local machine.
 
 ---
 
+## 🔧 Step 0: First-Time Git Setup (If Needed)
+
+### Configure Git (one-time setup):
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+```
+
+### For GitHub/GitLab (if using SSH):
+If you want to use SSH keys for authentication:
+1. Generate SSH key (if you don't have one):
+   ```bash
+   ssh-keygen -t ed25519 -C "your.email@example.com"
+   ```
+2. Add SSH key to your GitHub/GitLab account
+3. Test connection:
+   ```bash
+   ssh -T git@github.com  # For GitHub
+   # or
+   ssh -T git@gitlab.com  # For GitLab
+   ```
+
+---
+
 ## 🔄 Step 1: Clone and Checkout the Branch
 
-### If you don't have the repository yet:
+### For your friend (first time cloning the branch):
+Replace `<REPOSITORY_URL>` with the actual repository link (e.g., `https://github.com/username/network-risk-app.git` or `git@github.com:username/network-risk-app.git`):
+
 ```bash
--
+# Clone the repository and checkout the specific branch in one command
+git clone -b xbst_vs_mlp_benchmarking <REPOSITORY_URL>
+cd network-risk-app
+```
+
+**Example with HTTPS:**
+```bash
+git clone -b xbst_vs_mlp_benchmarking https://github.com/username/network-risk-app.git
+cd network-risk-app
+```
+
+**Example with SSH:**
+```bash
+git clone -b xbst_vs_mlp_benchmarking git@github.com:username/network-risk-app.git
 cd network-risk-app
 ```
 

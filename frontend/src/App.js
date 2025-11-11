@@ -18,7 +18,7 @@ const XGBoostSecurityDashboard = () => {
   const [isBenchmarking, setIsBenchmarking] = useState(false);
   const [modelMetrics, setModelMetrics] = useState({
     xgboost: { accuracy: 99.86, precision: 100, recall: 100, f1Score: 99.87 },
-    mlp: { accuracy: 99.5, precision: 99.2, recall: 99.8, f1Score: 99.5 }
+    mlp: { accuracy: 97, precision: 98, recall: 97, f1Score: 98 }
   });
 
   // Vérifier l'état du backend au démarrage
